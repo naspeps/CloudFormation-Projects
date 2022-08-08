@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create SG and EC2 instance
+Parameters:
+  myVPC:
+      Description: VPC used to deploy our resources below
+      Type: AWS::EC2::VPC::Id
+      Default: vpc-02864061f7be8f3ec
+  PublicSubnet:
+      Description: Subnet to be used for our Web Server
+      Type: AWS::EC2::Subnet::Id
+      Default: subnet-0f42c31dbcfd7ee9b
+  AMItoUse:
+      Description: AMI to use for our base image
+      Type: String
+      Default: ami-0cff7528ff583bf9a
+Resources:
+  testSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'Allow only http to our test host'
+      SecurityGroupIngress: 
+      - CidrIp: 0.0.0.0/0
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      SecurityGroupEgress: 
+      - CidrIp: 0.0.0.0/0
+        FromPort: -1
+        IpProtocol: -1
+        ToPort: -1
+      VpcId: 
+        Ref: myVPC
+  testWebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMItoUse
+      InstanceType: t3.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: "testSG"
+          SubnetId: 
+            Ref: "PublicSubnet"
+      UserData: 
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum update -y
+          sudo yum install -y httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+
